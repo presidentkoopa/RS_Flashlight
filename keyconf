@@ -1,0 +1,17 @@
+// The toggle is a NETWORK event, not a local console command. That is what
+// makes it arrive on every client on the same tic, so a torch switching on is
+// something the whole game agrees happened rather than a change on one machine.
+alias rsfl_flashlight "netevent rsfl_toggle"
+defaultbind f "rsfl_flashlight"
+
+// LISTED IN CUSTOMIZE CONTROLS, or the default bind is the only bind there is.
+//
+// defaultbind sets a key; it does not put the action anywhere the player can
+// see or change it. Without these two lines the torch was on F and nowhere
+// else -- which is close to useless in a headset, where the whole point is to
+// put it on a controller button you can reach without finding a keyboard.
+//
+// The section gets its own heading so it does not disappear into the middle of
+// the weapon binds.
+AddKeySection "Flashlight" RSFlashlight
+AddMenuKey "Toggle flashlight" rsfl_flashlight

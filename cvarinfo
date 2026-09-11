@@ -1,0 +1,44 @@
+// RS_Flashlight -- CVars
+//
+// A cone of lit AIR rather than a lit disc on the wall. Raymarched as a
+// postprocess pass, bounded first by an analytic ray/cone intersection so a
+// beam pointing away from you costs a depth sample and a few dot products.
+//
+// The ON/OFF is deliberately NOT here. It is an inventory token, because a cvar
+// lives on one machine and nobody else's client would know your torch was lit.
+
+server bool  rsfl_enabled     = true;
+
+// 0 head, 1 off hand, 2 clipped to the weapon.
+//
+// The hand is the one worth having in VR: you can light a doorway while aiming
+// somewhere else. Head-mounted always points where you already look, and a cone
+// seen end-on is a disc -- the shader fades that case out on purpose.
+server int   rsfl_mount       = 1;
+server float rsfl_offset_z    = -4.0;
+server float rsfl_offset_side = 0.0;
+
+// ------------------------------------------------------------------ shape --
+server float rsfl_inner       = 11.0;    // degrees, full brightness inside
+server float rsfl_outer       = 26.0;    // degrees, faded to nothing by here
+server float rsfl_length      = 1400.0;
+server float rsfl_density     = 0.5;
+// Above 1 concentrates the light near the lens, which is what stops a long
+// beam looking like a strip light.
+server float rsfl_falloff     = 1.8;
+
+// ------------------------------------------------------------------- dust --
+// Sampled in WORLD space, so motes hang in the room rather than travelling
+// with the torch -- sweeping the beam reveals different dust, the way it should.
+server float rsfl_dust        = 0.45;
+server float rsfl_dust_scale  = 0.035;   // higher = finer motes
+server float rsfl_dust_drift  = 0.35;    // how fast it settles
+
+// Deterministic, never random() -- the RNG seed is in the netgame consistency
+// checksum and a wobble is not worth spending it on.
+server float rsfl_flicker     = 0.08;
+
+// ----------------------------------------------------------------- colour --
+server int   rsfl_r           = 255;
+server int   rsfl_g           = 244;
+server int   rsfl_b           = 214;

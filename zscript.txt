@@ -1,0 +1,5 @@
+// RS_Flashlight -- engine is UZDXREMA. The volumetric beam natives and their
+// slot parameter are UZDXREMA-only.
+version "4.12"
+
+#include "zscript/rsfl_handler.zs"

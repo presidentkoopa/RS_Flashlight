@@ -1,0 +1,5 @@
+// Without this the handler never registers and nothing happens at all.
+GameInfo
+{
+	AddEventHandlers = "RSFL_Handler"
+}

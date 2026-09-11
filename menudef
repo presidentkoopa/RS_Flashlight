@@ -1,0 +1,82 @@
+OptionValue "RSFL_Mount"
+{
+	0, "On your head"
+	1, "Off hand"
+	2, "On the weapon"
+}
+
+OptionMenu "RSFLMain"
+{
+	Title "Flashlight"
+	StaticText "A cone of lit air, not just a bright patch on", "gray"
+	StaticText "the wall. Press F to switch it on.", "gray"
+	StaticText ""
+	Option "Enabled", "rsfl_enabled", "OnOff"
+	Option "Mounted", "rsfl_mount", "RSFL_Mount"
+	StaticText "The off hand is the one worth having in VR --", "gray"
+	StaticText "you can light a doorway while aiming somewhere", "gray"
+	StaticText "else. Head-mounted always points where you are", "gray"
+	StaticText "already looking, and a cone seen end-on is just", "gray"
+	StaticText "a disc.", "gray"
+	StaticText ""
+	Slider "Sits this far up", "rsfl_offset_z", -32.0, 32.0, 1.0, 0
+	Slider "And this far out", "rsfl_offset_side", -32.0, 32.0, 1.0, 0
+	StaticText "Moving it off the aim axis stops it washing out", "gray"
+	StaticText "the middle of the frame.", "gray"
+	StaticText ""
+	Submenu "The Beam", "RSFLBeam"
+	Submenu "Dust", "RSFLDust"
+	Submenu "Colour", "RSFLColor"
+}
+
+OptionMenu "RSFLBeam"
+{
+	Title "The Beam"
+	Slider "Hot core (degrees)", "rsfl_inner", 1.0, 60.0, 1.0, 0
+	Slider "Faded out by (degrees)", "rsfl_outer", 2.0, 80.0, 1.0, 0
+	Slider "Reach", "rsfl_length", 128.0, 4096.0, 64.0, 0
+	Slider "Brightness", "rsfl_density", 0.0, 2.0, 0.05, 2
+	StaticText ""
+	Slider "Falloff", "rsfl_falloff", 0.5, 4.0, 0.1, 1
+	StaticText "Above 1 concentrates the light near the lens,", "gray"
+	StaticText "which stops a long beam looking like a strip", "gray"
+	StaticText "light.", "gray"
+	StaticText ""
+	Slider "Flicker", "rsfl_flicker", 0.0, 0.5, 0.01, 2
+	StaticText "A little unsteadiness is most of what stops it", "gray"
+	StaticText "reading as a cone bolted to your face.", "gray"
+}
+
+OptionMenu "RSFLDust"
+{
+	Title "Dust"
+	StaticText "Motes hanging in the beam. Sampled in world", "gray"
+	StaticText "space, so they stay put in the room -- sweeping", "gray"
+	StaticText "the torch reveals different dust rather than", "gray"
+	StaticText "dragging the same motes around with you.", "gray"
+	StaticText ""
+	Slider "How much", "rsfl_dust", 0.0, 1.0, 0.05, 2
+	Slider "How fine", "rsfl_dust_scale", 0.005, 0.12, 0.005, 3
+	Slider "How fast it settles", "rsfl_dust_drift", 0.0, 2.0, 0.05, 2
+}
+
+OptionMenu "RSFLColor"
+{
+	Title "Colour"
+	Slider "Red", "rsfl_r", 0, 255, 5, 0
+	Slider "Green", "rsfl_g", 0, 255, 5, 0
+	Slider "Blue", "rsfl_b", 0, 255, 5, 0
+	StaticText ""
+	StaticText "It also lights the fog, if RS_Fog is loaded --", "gray"
+	StaticText "the mist takes the torch's colour where the", "gray"
+	StaticText "cone passes through it.", "gray"
+}
+
+// WITHOUT THIS THE MENU ABOVE EXISTS AND IS UNREACHABLE. Defining an
+// OptionMenu only names it; nothing in the game links to it until something
+// adds a Submenu entry pointing at it. Same hook RS_Darkness and
+// RS_GlowInTheDark use, which is why theirs showed up and this one did not.
+AddOptionMenu "OptionsMenu"
+{
+	Submenu "Flashlight", "RSFLMain"
+}
