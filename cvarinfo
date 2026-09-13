@@ -45,6 +45,23 @@ user float rsfl_density     = 0.5;
 // beam looking like a strip light.
 user float rsfl_falloff     = 1.8;
 
+// ------------------------------------------------------------------- spot --
+// The light the torch throws on walls, floors and monsters: a real dynamic
+// spot light on the pawn, shaped by the cone above -- same angles, same colour,
+// and it dies out where the beam's reach does. This is its brightness. 0 takes
+// the light off entirely and leaves only the lit air, exactly as before.
+//
+// It does not flicker. rsfl_flicker moves every tic, and following it would
+// rebuild the pawn's lights 35 times a second.
+user float rsfl_spot        = 1.0;
+
+// Walls block it. ON by default because a dynamic light without the shadowmap
+// has no occlusion at all -- with the reach this one has, it lit the room on
+// the far side of the wall you were facing and the monster behind the door.
+// The cost is one shadowmap row, and the shadow edge of a light held in a hand
+// trails the hand by a frame. Needs gl_light_shadowmap on to do anything.
+user bool  rsfl_spot_shadows = true;
+
 // ------------------------------------------------------------------- dust --
 // Sampled in WORLD space, so motes hang in the room rather than travelling
 // with the torch -- sweeping the beam reveals different dust, the way it should.

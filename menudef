@@ -45,6 +45,11 @@ OptionMenu "RSFLBeam"
 	StaticText "which stops a long beam looking like a strip", "gray"
 	StaticText "light.", "gray"
 	StaticText ""
+	Slider "Lights what it hits", "rsfl_spot", 0.0, 2.0, 0.05, 2
+	StaticText "0 is no light on the walls at all, just the cone.", "gray"
+	Option "  Walls block it", "rsfl_spot_shadows", "OnOff"
+	StaticText "Off, it shines through walls into the next room.", "gray"
+	StaticText ""
 	Slider "Flicker", "rsfl_flicker", 0.0, 0.5, 0.01, 2
 	StaticText "A little unsteadiness is most of what stops it", "gray"
 	StaticText "reading as a cone bolted to your face.", "gray"
