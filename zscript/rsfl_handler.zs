@@ -5,20 +5,27 @@
 // shader knowing VR exists. What this mod owns is whether it is on, where it is
 // mounted, and what it looks like.
 //
-// IT TAKES SLOT 0. There are four volumetric beam slots and the flashlight is
-// the one that is on for hours at a time, so it takes the lowest and leaves the
-// others for things that flash. Before slots existed, opening the weapon wheel
-// would take the beam away and closing it would switch the torch off.
+// IT TAKES SLOT 1 OF THIRTY-TWO. Slot 0 is where every caller that never passes
+// a slot lands -- the weapon wheel's laser and the Lance still do -- so a torch
+// on slot 0 fought them: whichever published last won, and the torch-off path
+// erased their cone every tic. RS_VR_PistolTest's muzzle flashes sit at
+// wm_flash_slot (4) + hand. The fog glow follows the lowest live slot, so the
+// torch keeps it except while something on slot 0 is lit.
 //
-// Slot is left to its default of 0 rather than written out; either is fine.
+// PUBLISHED FROM UiTick, NOT WorldTick. The playsim freezes while a menu is
+// open, so a beam published from WorldTick could not show a slider's change
+// until the menu closed. The beam setters are clearscope for exactly this, and
+// UiTick runs every tic whether or not a menu is up. The POSE is not ours at
+// all: SetVolumetricBeamAnchor has the renderer read the hand or head every
+// frame, so a hand torch does not step at 35 Hz behind a 90 Hz controller.
 //
 // THE SWITCH IS AN INVENTORY TOKEN, NOT A CVAR.
 //
-// A cvar lives on one machine. In a netgame nobody else's client would know
-// your torch was on, so nobody else would ever see it. A token is playsim
-// state: it is synchronised like anything else an actor carries, it saves with
-// the game, and every client can read every player's. That is the whole reason
-// other people can see your light at all.
+// A cvar lives on one machine. A token is playsim state: it is synchronised
+// like anything else an actor carries and it saves with the game, so the whole
+// game agrees whether your torch is on. Drawing it is another matter -- only
+// the console player's own torch is published here, because the anchor reads
+// the console player's pose.
 
 class RSFL_Token : Inventory
 {
@@ -27,10 +34,21 @@ class RSFL_Token : Inventory
 
 class RSFL_Handler : EventHandler
 {
-	// Where the torch is mounted.
+	// Where the torch is mounted (rsfl_mount).
 	const M_HEAD  = 0;   // looks where you look
 	const M_HAND  = 1;   // the off hand, tracked separately in VR
-	const M_GUN   = 2;   // clipped to the weapon, points where you aim
+	const M_GUN   = 2;   // the weapon hand, points where you aim
+
+	const SLOT = 1;
+
+	// SetVolumetricBeamAnchor modes.
+	const A_MAINHAND = 1;
+	const A_OFFHAND  = 2;
+	const A_HEAD     = 3;
+
+	// Whether this handler published the beam last tic. The torch-off path
+	// clears only a beam it put there, never a slot somebody else is using.
+	private ui bool held;
 
 	override void NetworkProcess(ConsoleEvent e)
 	{
@@ -47,91 +65,132 @@ class RSFL_Handler : EventHandler
 		else                               mo.GiveInventory("RSFL_Token", 1);
 	}
 
-	override void WorldTick()
+	override void UiTick()
 	{
-		if (!level) return;
-
-		if (!RSFL.GetB("rsfl_enabled", true))
-		{
-			level.ClearVolumetricBeam(0);
-			return;
-		}
-
-		// One beam, and it is yours. Other players' torches would each want a
-		// slot of their own and there are four in total -- see the note in
-		// doombase.zs. Rendering everyone's is a knob rather than a given
-		// because each live cone is a raymarch over the pixels it covers.
-		let pmo = players[consoleplayer].mo;
-		if (!pmo || pmo.health <= 0 || pmo.CountInv("RSFL_Token") <= 0)
-		{
-			level.ClearVolumetricBeam(0);
-			return;
-		}
-
-		Vector3 org, dir;
-		[org, dir] = Mount(pmo);
-
-		level.SetVolumetricBeam(org, dir,
-			RSFL.Tint(),
-			RSFL.GetF("rsfl_inner", 11.0),
-			RSFL.GetF("rsfl_outer", 26.0),
-			RSFL.GetF("rsfl_length", 1400.0),
-			RSFL.GetF("rsfl_density", 0.5) * Flicker(pmo),
-			RSFL.GetF("rsfl_falloff", 1.8),
-			RSFL.GetF("rsfl_dust", 0.45),
-			RSFL.GetF("rsfl_dust_scale", 0.035),
-			RSFL.GetF("rsfl_dust_drift", 0.35));
+		Publish();
 	}
 
 	override void WorldUnloaded(WorldEvent e)
 	{
-		if (level) level.ClearVolumetricBeam(0);
+		// The engine resets beams on a map change too; this is the mod saying
+		// so rather than relying on it.
+		if (level) level.ClearVolumetricBeam(SLOT);
 	}
 
-	// Where it sits and where it points.
-	//
-	// The mount is the whole VR question. Head-mounted always points where you
-	// look, which is comfortable and slightly useless -- the beam is exactly
-	// where your attention already is, and a cone seen end-on is a disc. The
-	// off hand is the one worth having: you can light a doorway while aiming
-	// somewhere else, and it is the reading the shader's own axis-fade note
-	// describes as "the shot actually worth having".
-	Vector3, Vector3 Mount(PlayerPawn pmo)
+	ui void Publish()
 	{
-		int m = RSFL.GetI("rsfl_mount", M_HAND);
-		double up = RSFL.GetF("rsfl_offset_z", -4.0);
-		double side = RSFL.GetF("rsfl_offset_side", 0.0);
+		if (!level) return;
 
-		// AttackPos is the real muzzle -- the hand, in this fork's VR path --
-		// and AttackAngle/AttackPitch the direction it is actually pointing.
-		// On a flat screen they track the view, which is why the head and gun
-		// mounts collapse to the same thing there.
-		double ang, pit;
-		Vector3 org;
-
-		if (m == M_HEAD)
+		let pmo = players[consoleplayer].mo;
+		bool on = RSFL.GetB("rsfl_enabled", true)
+			&& pmo && pmo.health > 0 && pmo.CountInv("RSFL_Token") > 0;
+		if (!on)
 		{
-			org = pmo.pos + (0, 0, pmo.height * 0.9 + up);
-			ang = pmo.angle;
-			pit = pmo.pitch;
+			Release();
+			return;
+		}
+
+		int m = clamp(RSFL.GetI("rsfl_mount", M_HAND), M_HEAD, M_GUN);
+		Vector3 ofs = (RSFL.GetF("rsfl_offset_fwd", 0.0),
+			RSFL.GetF("rsfl_offset_side", 0.0),
+			RSFL.GetF("rsfl_offset_z", -4.0));
+
+		Vector3 org, dir;
+		[org, dir] = ScriptPose(pmo, m, ofs);
+
+		// The engine clamps these too, and logs when it has to. Keeping inner
+		// under outer here means dragging one slider past the other just pins
+		// it, rather than printing a clamp line every tic.
+		double outer = clamp(RSFL.GetF("rsfl_outer", 26.0), 0.2, 89.0);
+		double inner = clamp(RSFL.GetF("rsfl_inner", 11.0), 0.0, outer - 0.1);
+
+		level.SetVolumetricBeam(org, dir,
+			RSFL.Tint(),
+			inner,
+			outer,
+			RSFL.GetF("rsfl_length", 1400.0),
+			RSFL.GetF("rsfl_density", 0.5) * Flicker(),
+			RSFL.GetF("rsfl_falloff", 1.8),
+			RSFL.GetF("rsfl_dust", 0.45),
+			RSFL.GetF("rsfl_dust_scale", 0.035),
+			RSFL.GetF("rsfl_dust_drift", 0.35),
+			SLOT);
+
+		// AFTER SetVolumetricBeam: claiming a slot that was not live resets its
+		// anchor. Anchored, the renderer takes both origin and direction from
+		// the pose each frame, with ofs as (forward, right, up) in its frame.
+		level.SetVolumetricBeamAnchor(SLOT, AnchorFor(m), ofs);
+		held = true;
+	}
+
+	ui void Release()
+	{
+		if (!held) return;
+		level.ClearVolumetricBeam(SLOT);
+		held = false;
+	}
+
+	clearscope static int AnchorFor(int m)
+	{
+		if (m == M_HEAD) return A_HEAD;
+		if (m == M_GUN)  return A_MAINHAND;
+		return A_OFFHAND;
+	}
+
+	// The same pose the anchor resolves, worked out in script. The renderer
+	// only uses it if the anchor cannot find a pose, but it has to be right
+	// anyway, because a beam pointing somewhere else for one frame is a flash.
+	//
+	// THE ENGINE STORES HAND ANGLES OFFSET. AttackAngle and OffhandAngle are
+	// world yaw MINUS 90, and AttackPitch and OffhandPitch are negated
+	// (g_game.cpp, hw_vrmodes.cpp). Every reader adds the 90 back and flips the
+	// pitch -- RS_WorldHands does, and the anchor does. Fed in raw, the torch
+	// pointed 90 degrees right with its pitch upside down.
+	//
+	// Doom pitch is positive DOWN, so forward.z is -sin(pitch). The frame is
+	// the anchor's own (hw_drawinfo.cpp ResolveVolBeamPose), so the offsets mean
+	// the same thing whichever of the two positions the beam.
+	clearscope static Vector3, Vector3 ScriptPose(PlayerPawn pmo, int m, Vector3 ofs)
+	{
+		double eyeZ = players[consoleplayer].viewz;
+		Vector3 org;
+		double yaw, pit;
+
+		if (m == M_HAND)
+		{
+			org = pmo.OffhandPos;
+			yaw = pmo.OffhandAngle + 90.0;
+			pit = -pmo.OffhandPitch;
+		}
+		else if (m == M_GUN)
+		{
+			org = pmo.AttackPos;
+			yaw = pmo.AttackAngle + 90.0;
+			pit = -pmo.AttackPitch;
 		}
 		else
 		{
-			// Hand and gun both read the attack origin. They differ in whether
-			// the mod applies a side offset, which is what puts a hand torch
-			// off the aim axis and stops it washing the middle of the frame.
-			org = pmo.AttackPos;
-			if (org == (0, 0, 0)) org = pmo.pos + (0, 0, pmo.height * 0.8);
-			ang = pmo.AttackAngle != 0 ? pmo.AttackAngle : pmo.angle;
-			pit = pmo.AttackPitch != 0 ? pmo.AttackPitch : pmo.pitch;
-			org.z += up;
-			if (m == M_HAND && side != 0)
-				org += (cos(ang + 90) * side, sin(ang + 90) * side, 0);
+			org = (pmo.pos.x, pmo.pos.y, eyeZ);
+			yaw = pmo.angle;
+			pit = pmo.pitch;
 		}
 
-		double cp = cos(-pit);
-		Vector3 dir = (cos(ang) * cp, sin(ang) * cp, sin(-pit));
-		return org, dir;
+		// A hand pose nobody has written yet is exactly (0,0,0). That, not a
+		// zero ANGLE, is the "no pose" test: an angle of 0 is a real direction.
+		if (org == (0, 0, 0))
+		{
+			org = (pmo.pos.x, pmo.pos.y, eyeZ);
+			yaw = pmo.angle;
+			pit = pmo.pitch;
+		}
+
+		double cp = cos(pit), sp = sin(pit);
+		double cy = cos(yaw), sy = sin(yaw);
+		Vector3 fwd   = (cp * cy, cp * sy, -sp);
+		Vector3 right = (sy, -cy, 0);
+		Vector3 up    = (sp * cy, sp * sy, cp);
+
+		return org + fwd * ofs.x + right * ofs.y + up * ofs.z, fwd;
 	}
 
 	// A torch is not a studio light. A little unsteadiness costs nothing and is
@@ -141,8 +200,8 @@ class RSFL_Handler : EventHandler
 	// consistency checksum, and a torch that rolled dice every tic would be
 	// rolling them on every client -- fine if it happened identically, and
 	// nothing worth risking for a wobble. sin of the map time is identical
-	// everywhere by construction.
-	double Flicker(Actor mo)
+	// everywhere by construction. It holds still while the game is paused.
+	clearscope static double Flicker()
 	{
 		double amt = clamp(RSFL.GetF("rsfl_flicker", 0.08), 0.0, 1.0);
 		if (amt <= 0.0) return 1.0;

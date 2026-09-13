@@ -7,38 +7,58 @@
 // The ON/OFF is deliberately NOT here. It is an inventory token, because a cvar
 // lives on one machine and nobody else's client would know your torch was lit.
 
+// The whole mod, on or off. The host's call, so it stays server.
 server bool  rsfl_enabled     = true;
 
-// 0 head, 1 off hand, 2 clipped to the weapon.
+// EVERYTHING BELOW IS `user`, NOT `server`.
 //
-// The hand is the one worth having in VR: you can light a doorway while aiming
-// somewhere else. Head-mounted always points where you already look, and a cone
-// seen end-on is a disc -- the shader fades that case out on purpose.
-server int   rsfl_mount       = 1;
-server float rsfl_offset_z    = -4.0;
-server float rsfl_offset_side = 0.0;
+// Where the torch sits and what the beam looks like change only what THIS
+// machine draws -- the beam is published for the console player alone. As
+// server cvars they were the host's to set, so in a netgame nobody else could
+// pick their own mount or colour.
+
+// Where the torch is held. The engine reads the pose every FRAME
+// (SetVolumetricBeamAnchor), so a hand torch does not judder behind the
+// controller the way a pose published at 35 Hz did.
+//   0 head    -- the headset, or the view on a flat screen
+//   1 off hand
+//   2 the weapon hand
+//
+// The off hand is the one worth having in VR: you can light a doorway while
+// aiming somewhere else. Head-mounted always points where you already look, and
+// a cone seen end-on is a disc -- the engine fades that case (vol_beam_axisfade).
+user int   rsfl_mount       = 1;
+
+// Where on the mount the lens is, in map units, in the MOUNT'S OWN frame: they
+// turn with the hand or head, so "forward" stays along the beam however you
+// hold it.
+user float rsfl_offset_fwd  = 0.0;
+user float rsfl_offset_side = 0.0;    // + right
+user float rsfl_offset_z    = -4.0;   // + up
 
 // ------------------------------------------------------------------ shape --
-server float rsfl_inner       = 11.0;    // degrees, full brightness inside
-server float rsfl_outer       = 26.0;    // degrees, faded to nothing by here
-server float rsfl_length      = 1400.0;
-server float rsfl_density     = 0.5;
+user float rsfl_inner       = 11.0;    // degrees, full brightness inside
+user float rsfl_outer       = 26.0;    // degrees, faded to nothing by here
+user float rsfl_length      = 1400.0;
+user float rsfl_density     = 0.5;
 // Above 1 concentrates the light near the lens, which is what stops a long
 // beam looking like a strip light.
-server float rsfl_falloff     = 1.8;
+user float rsfl_falloff     = 1.8;
 
 // ------------------------------------------------------------------- dust --
 // Sampled in WORLD space, so motes hang in the room rather than travelling
 // with the torch -- sweeping the beam reveals different dust, the way it should.
-server float rsfl_dust        = 0.45;
-server float rsfl_dust_scale  = 0.035;   // higher = finer motes
-server float rsfl_dust_drift  = 0.35;    // how fast it settles
+user float rsfl_dust        = 0.45;
+user float rsfl_dust_scale  = 0.035;   // higher = finer motes
+// Map units a second. One noise cell is 1 / rsfl_dust_scale units (about 29 at
+// the default), so anything much under 5 reads as dust hanging still.
+user float rsfl_dust_drift  = 0.35;
 
 // Deterministic, never random() -- the RNG seed is in the netgame consistency
 // checksum and a wobble is not worth spending it on.
-server float rsfl_flicker     = 0.08;
+user float rsfl_flicker     = 0.08;
 
 // ----------------------------------------------------------------- colour --
-server int   rsfl_r           = 255;
-server int   rsfl_g           = 244;
-server int   rsfl_b           = 214;
+user int   rsfl_r           = 255;
+user int   rsfl_g           = 244;
+user int   rsfl_b           = 214;

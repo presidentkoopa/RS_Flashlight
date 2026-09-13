@@ -2,7 +2,7 @@ OptionValue "RSFL_Mount"
 {
 	0, "On your head"
 	1, "Off hand"
-	2, "On the weapon"
+	2, "Weapon hand"
 }
 
 OptionMenu "RSFLMain"
@@ -19,10 +19,12 @@ OptionMenu "RSFLMain"
 	StaticText "already looking, and a cone seen end-on is just", "gray"
 	StaticText "a disc.", "gray"
 	StaticText ""
-	Slider "Sits this far up", "rsfl_offset_z", -32.0, 32.0, 1.0, 0
-	Slider "And this far out", "rsfl_offset_side", -32.0, 32.0, 1.0, 0
-	StaticText "Moving it off the aim axis stops it washing out", "gray"
-	StaticText "the middle of the frame.", "gray"
+	Slider "Lens forward", "rsfl_offset_fwd", -32.0, 32.0, 1.0, 0
+	Slider "Lens right", "rsfl_offset_side", -32.0, 32.0, 1.0, 0
+	Slider "Lens up", "rsfl_offset_z", -32.0, 32.0, 1.0, 0
+	StaticText "Measured along the hand or head, so they turn", "gray"
+	StaticText "with it. Moving it off the aim axis stops it", "gray"
+	StaticText "washing out the middle of the frame.", "gray"
 	StaticText ""
 	Submenu "The Beam", "RSFLBeam"
 	Submenu "Dust", "RSFLDust"
@@ -34,6 +36,7 @@ OptionMenu "RSFLBeam"
 	Title "The Beam"
 	Slider "Hot core (degrees)", "rsfl_inner", 1.0, 60.0, 1.0, 0
 	Slider "Faded out by (degrees)", "rsfl_outer", 2.0, 80.0, 1.0, 0
+	StaticText "The core never grows past the fade.", "gray"
 	Slider "Reach", "rsfl_length", 128.0, 4096.0, 64.0, 0
 	Slider "Brightness", "rsfl_density", 0.0, 2.0, 0.05, 2
 	StaticText ""
@@ -45,6 +48,14 @@ OptionMenu "RSFLBeam"
 	Slider "Flicker", "rsfl_flicker", 0.0, 0.5, 0.01, 2
 	StaticText "A little unsteadiness is most of what stops it", "gray"
 	StaticText "reading as a cone bolted to your face.", "gray"
+	StaticText ""
+	StaticText "SEEN END-ON -- every cone, not just this one", "white"
+	Slider "Fade", "vol_beam_axisfade", 0.0, 1.0, 0.05, 2
+	Slider "  when it passes this close to your eye", "vol_beam_axisfade_reach", 0.0, 64.0, 1.0, 0
+	StaticText "A cone pointed straight where you look is a disc", "gray"
+	StaticText "over the middle of the view. This fades it, but", "gray"
+	StaticText "only when the beam starts near your eye -- a torch", "gray"
+	StaticText "held in a hand keeps its light.", "gray"
 }
 
 OptionMenu "RSFLDust"
@@ -57,7 +68,9 @@ OptionMenu "RSFLDust"
 	StaticText ""
 	Slider "How much", "rsfl_dust", 0.0, 1.0, 0.05, 2
 	Slider "How fine", "rsfl_dust_scale", 0.005, 0.12, 0.005, 3
-	Slider "How fast it settles", "rsfl_dust_drift", 0.0, 2.0, 0.05, 2
+	Slider "How fast it settles", "rsfl_dust_drift", 0.0, 40.0, 0.25, 2
+	StaticText "Units a second. Under about 5 the dust hangs", "gray"
+	StaticText "still; drifting starts showing above that.", "gray"
 }
 
 OptionMenu "RSFLColor"
@@ -68,8 +81,8 @@ OptionMenu "RSFLColor"
 	Slider "Blue", "rsfl_b", 0, 255, 5, 0
 	StaticText ""
 	StaticText "It also lights the fog, if RS_Fog is loaded --", "gray"
-	StaticText "the mist takes the torch's colour where the", "gray"
-	StaticText "cone passes through it.", "gray"
+	StaticText "the mist takes the torch's colour, brightness", "gray"
+	StaticText "and falloff where the cone passes through it.", "gray"
 }
 
 // WITHOUT THIS THE MENU ABOVE EXISTS AND IS UNREACHABLE. Defining an
