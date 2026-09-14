@@ -1,3 +1,15 @@
+// menu_lint (tools\menu_lint.py) holds the tuning pages to the live-slider
+// rule: every slider on them has to move the torch while the menu is open --
+// RSFL_Handler.Publish, run from UiTick, for the cone, and the net-event relay
+// beside SyncUnderMenu for the spot. See the LINT-UI-LIVE lines there.
+// LINT-LIVE: RSFLMain RSFLBeam RSFLDust RSFLColor
+//
+// The two SEEN END-ON rows are the ENGINE's cvars, not this mod's. The
+// renderer reads them itself every frame (hw_drawinfo.cpp, the volumetric beam
+// uniforms), so they are as live as a slider gets -- but no push in this mod
+// can vouch for them, so they are named here instead.
+// LINT-LIVE-OK: vol_beam_axisfade vol_beam_axisfade_reach
+
 OptionValue "RSFL_Mount"
 {
 	0, "On your head"

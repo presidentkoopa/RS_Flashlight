@@ -128,6 +128,11 @@ class RSFL_Handler : EventHandler
 		for (int i = 0; i < MAXPLAYERS; i++) RemoveSpot(i);
 	}
 
+	// Every beam slider is read here, and UiTick runs this, so the cone moves
+	// under the menu. Declared for menu_lint's live-page check:
+	// LINT-UI-LIVE: rsfl_offset_fwd rsfl_offset_side rsfl_offset_z rsfl_inner rsfl_outer rsfl_length
+	// LINT-UI-LIVE: rsfl_density rsfl_falloff rsfl_dust rsfl_dust_scale rsfl_dust_drift rsfl_flicker
+	// LINT-UI-LIVE: rsfl_r rsfl_g rsfl_b
 	ui void Publish()
 	{
 		if (!level) return;
@@ -191,6 +196,19 @@ class RSFL_Handler : EventHandler
 	// Single player only. A netgame never pauses for a menu, WorldTick is
 	// already doing this there, and the event would be traffic for nothing.
 	// The title map does not pause either.
+	//
+	// "LIGHTS WHAT IT HITS" IS DECLARED LIVE, AND IT IS A RELAY, NOT A PUSH.
+	// menu_lint's live rule asks for a renderer read or a clearscope UiTick push,
+	// and the spot is neither: A_AttachLight is play scope, so the slider's value
+	// reaches the light through this event and NetworkProcess. It is declared
+	// anyway because it does move under a pausing menu -- G_Ticker runs net
+	// commands while P_Ticker sits paused, and P_Ticker's paused branch rebuilds
+	// a flagged light before the frame (p_tick.cpp) -- but a tic or two behind
+	// the drag rather than on the frame, which is the honest difference from
+	// the beam rows above. If this relay ever stops, this line is what hides it.
+	// The spot's other inputs (lens, cone, reach, colour) ride the same relay;
+	// their rows are live through Publish for the cone.
+	// LINT-UI-LIVE: rsfl_spot
 	ui void SyncUnderMenu()
 	{
 		if (netgame || gamestate != GS_LEVEL || menuactive == Menu.Off) return;
